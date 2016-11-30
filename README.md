@@ -1,2 +1,3 @@
-# MediatorBot
-A bot that does sentiment analysis of a group conversation. Created during UK DX Hackathon, Cambridge, 2016
+# Debugging a C# Azure Bot Service bot in Visual Studio 
+
+To learn how to debug Azure Bot Service bots, please visit https://aka.ms/bf-docs-azure-debug
