@@ -24,6 +24,7 @@ namespace MediatorBot
         public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
         {
             var message = await argument;
+            await context.PostAsync($"You said:{message.Text}");
             if (message.Text=="!list")
             {
                 var b = new StringBuilder();
