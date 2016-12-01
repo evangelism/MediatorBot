@@ -1,37 +1,26 @@
 ﻿using Microsoft.Bot.Builder.Dialogs;
-using Microsoft.Bot.Connector;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Web;
+using System.Threading.Tasks;
+using Microsoft.Bot.Connector;
 
 namespace MediatorBot
 {
     [Serializable]
     public class MediatorDialog : IDialog<string>
     {
-
-        public float SentimentScore = 0;
-        public List<string> transcript = new List<string>();
-
         public async Task StartAsync(IDialogContext context)
         {
-            context.Wait(MessageReceivedAsync);
+            context.Wait(ProcessMessage);
         }
 
-        public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
+        private async Task ProcessMessage(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
-            var message = await argument;
-            await context.PostAsync($"You said:{message.Text}");
-            if (message.Text=="!list")
-            {
-                var b = new StringBuilder();
-                transcript.ForEach(x => b.AppendLine(x));
-                await context.PostAsync(b.ToString());
-                transcript.Clear();
-            }
+            var msg = await result;
+            await context.PostAsync($"You said {msg.Text}");
+            context.Wait(ProcessMessage);
         }
     }
 }
