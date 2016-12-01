@@ -71,6 +71,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BingSearch.cs" />
     <Compile Include="ConversationState.cs" />
     <Compile Include="db.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

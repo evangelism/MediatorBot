@@ -8,20 +8,30 @@ using Microsoft.Bot.Connector;
 using System.Text;
 using MediatorLib;
 using System.IO;
+using Microsoft.Bot.Builder.Luis;
+using Microsoft.Bot.Builder.Luis.Models;
 
 namespace MediatorBot
 {
+    [LuisModel("f38fbeda-63a5-4a86-b00b-5e3bcfa08d55", "719a7a71cd7f458682f8ca473401f4e0")]
     [Serializable]
-    public class MediatorDialog : IDialog<string>
+    public class MediatorDialog : LuisDialog<string>
     {
-        public async Task StartAsync(IDialogContext context)
+
+        protected override async Task MessageReceived(IDialogContext context, IAwaitable<IMessageActivity> item)
         {
-            context.Wait(ProcessMessage);
+            //Walkaround to get activity
+            msg = (Activity)await item;
+            await base.MessageReceived(context, item);
         }
 
-        private async Task ProcessMessage(IDialogContext context, IAwaitable<IMessageActivity> result)
+        [field: NonSerialized()]
+        private Activity msg;
+
+        [LuisIntent("")]
+        private async Task ProcessMessage(IDialogContext context, LuisResult result)
         {
-            var msg = await result;
+            
             if (msg.Text != "!users" && msg.Text != "!stats")
             {
                 await ConversationState.RegisterMessage(msg.From.Name, msg.Text);
@@ -32,17 +42,35 @@ namespace MediatorBot
             {
                 ConversationState.TextAnalysisDocumentStore phrasesDoc = await ConversationState.GetPhrasesforConversation();
 
-                await context.PostAsync(BuildReply(
-                sb =>
+                double score = 0;
+                var k = 0;
+                var i = 0;
+                foreach(var doc in phrasesDoc.documents)
                 {
-                    foreach (ConversationState.TextAnalysisDocument doc in phrasesDoc.documents)
+                    if(doc.score > score)
                     {
-                        foreach (string x in doc.keyPhrases)
-                        {
-                            sb.AppendLine($"Phrase: {x}");
-                        }
+                        score = doc.score;
+                        k = i;
                     }
-                   }));
+                    i++;
+                }
+
+                var reply = await BuildBingReply(phrasesDoc.documents[k].keyPhrases[0]);
+                await context.PostAsync(reply);
+                
+
+                //await context.PostAsync(BuildReply(
+                //sb =>
+                //{
+                //    foreach (ConversationState.TextAnalysisDocument doc in phrasesDoc.documents)
+                //    {
+                //        foreach (string x in doc.keyPhrases)
+                //        {
+                //            sb.AppendLine($"Phrase: {x}");
+                //        }
+                //    }
+                //   }));
+              
             }
 
             if (msg.Text == "!users")
@@ -53,6 +81,7 @@ namespace MediatorBot
                         ConversationState.Users.ForEach(x => sb.AppendLine(x.name));
                     }));
             }
+            //Stats and graph
             else if (msg.Text == "!stats")
             {
                 await context.PostAsync(BuildReply(
@@ -74,9 +103,49 @@ namespace MediatorBot
             }
             else
             {
-                await context.PostAsync("");
+                //await context.PostAsync("");
             }
-            context.Wait(ProcessMessage);
+            context.Wait(MessageReceived);
+        }
+
+        [LuisIntent("Positive")]
+        public async Task Positive(IDialogContext context, LuisResult result)
+        {
+            //Register Message
+            if (msg.Text != "!users" && msg.Text != "!stats")
+            {
+                await ConversationState.RegisterMessage(msg.From.Name, msg.Text);
+            }
+
+            dynamic res = await BingSearch.CallBingImageSearch(result.Query);
+
+
+            Activity replyToConversation = msg.CreateReply();
+            replyToConversation.Type = "message";
+            replyToConversation.Attachments = new List<Attachment>();
+            List<CardImage> cardImages = new List<CardImage>();
+            var imgUrl = res.contentUrl.ToString();
+            cardImages.Add(new CardImage(imgUrl.ToString(), "img", null));
+            List<CardAction> cardButtons = new List<CardAction>();
+            CardAction plButton = new CardAction()
+            {
+                Value = res.contentUrl,
+                Type = "openUrl",
+                Title = ""
+            };
+            cardButtons.Add(plButton);
+            ThumbnailCard plCard = new ThumbnailCard()
+            {
+                Title = "",
+                Subtitle = "",
+                Images = cardImages
+
+            };
+            Attachment plAttachment = plCard.ToAttachment();
+            replyToConversation.Attachments.Add(plAttachment);
+
+            await context.PostAsync(replyToConversation);
+            context.Wait(MessageReceived);
         }
 
         protected string BuildReply(Action<StringBuilder> body)
@@ -84,6 +153,33 @@ namespace MediatorBot
             var sb = new StringBuilder();
             body(sb);
             return sb.ToString();
+        }
+
+        protected async Task<Activity> BuildBingReply(string text)
+        {
+            dynamic res = await BingSearch.CallBingSearch(text);
+
+            Activity replyToConversation = msg.CreateReply();
+            replyToConversation.Type = "message";
+            replyToConversation.Attachments = new List<Attachment>();
+            List<CardAction> cardButtons = new List<CardAction>();
+            CardAction plButton = new CardAction()
+            {
+                Value = res.displayUrl,
+                Type = "openUrl",
+                Title = text
+            };
+            cardButtons.Add(plButton);
+            ThumbnailCard plCard = new ThumbnailCard()
+            {
+                Title = res.name,
+                Subtitle = res.snippet,
+                //Images = cardImages,
+                Buttons = cardButtons
+            };
+            Attachment plAttachment = plCard.ToAttachment();
+            replyToConversation.Attachments.Add(plAttachment);
+            return replyToConversation;
         }
     }
 }
