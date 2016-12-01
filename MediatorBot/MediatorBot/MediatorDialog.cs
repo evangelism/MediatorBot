@@ -27,7 +27,7 @@ namespace MediatorBot
                 await context.PostAsync(BuildReply(
                     sb =>
                     {
-                        ConversationState.Users.ForEach(x => sb.AppendLine(x));
+                        ConversationState.Users.ForEach(x => sb.AppendLine(x.name));
                     }));
             }
             else if (msg.Text=="!stats")
@@ -35,8 +35,8 @@ namespace MediatorBot
                 await context.PostAsync(BuildReply(
                     sb =>
                     {
-                        foreach(var x in ConversationState.UserMsgs)
-                        { sb.AppendLine($"{x.Key}: {x.Value}"); }
+                        foreach(var x in ConversationState.Users)
+                        { sb.AppendLine($"{x.name}: msgs={x.MessageCount}, sentiment={x.Sentiment}"); }
                     }));
             }
             context.Wait(ProcessMessage);
