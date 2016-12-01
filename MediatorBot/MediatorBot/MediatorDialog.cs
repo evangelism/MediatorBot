@@ -41,7 +41,7 @@ namespace MediatorBot
             }
             else
             {
-                await context.PostAsync("Listening...");
+                await context.PostAsync("");
             }
             context.Wait(ProcessMessage);
         }
