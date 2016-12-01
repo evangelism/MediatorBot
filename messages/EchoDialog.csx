@@ -41,9 +41,9 @@ public class EchoDialog : IDialog<object>
         }
         else
         {
-            await context.PostAsync($"{this.count++}: You said {message.Text}");
             var M = new MediatorLib.MediatorLib();
             await context.PostAsync($"Result={M.Process(message.Text)}");
+            await context.PostAsync($"{this.count++}: You said {message.Text}");
             context.Wait(MessageReceivedAsync);
         }
     }
