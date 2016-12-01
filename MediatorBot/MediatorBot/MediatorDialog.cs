@@ -34,10 +34,14 @@ namespace MediatorBot
                 await context.PostAsync(BuildReply(
                 sb =>
                 {
-                    foreach (string x in phrasesDoc.documents[0].keyPhrases)
+                    foreach (ConversationState.TextAnalysisDocument doc in phrasesDoc.documents)
                     {
-                        sb.AppendLine($"Phrase: {x}"); }
-                     }));
+                        foreach (string x in doc.keyPhrases)
+                        {
+                            sb.AppendLine($"Phrase: {x}");
+                        }
+                    }
+                   }));
             }
 
             if (msg.Text == "!users")
