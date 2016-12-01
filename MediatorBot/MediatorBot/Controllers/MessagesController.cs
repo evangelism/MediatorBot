@@ -8,6 +8,7 @@ using System.Web.Http.Description;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Microsoft.Bot.Builder.Dialogs;
+using MediatorLib;
 
 namespace MediatorBot
 {
@@ -51,6 +52,10 @@ namespace MediatorBot
                 // Handle conversation state changes, like members being added and removed
                 // Use Activity.MembersAdded and Activity.MembersRemoved and Activity.Action for info
                 // Not available in all channels
+                foreach(var x in message.MembersAdded)
+                {
+                    ConversationState.AddUser(x.Name);
+                }
             }
             else if (message.Type == ActivityTypes.ContactRelationUpdate)
             {

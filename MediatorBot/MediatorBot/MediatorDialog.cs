@@ -5,6 +5,8 @@ using System.Linq;
 using System.Web;
 using System.Threading.Tasks;
 using Microsoft.Bot.Connector;
+using System.Text;
+using MediatorLib;
 
 namespace MediatorBot
 {
@@ -19,8 +21,32 @@ namespace MediatorBot
         private async Task ProcessMessage(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
             var msg = await result;
-            await context.PostAsync($"You said {msg.Text}");
+            ConversationState.RegisterMessage(msg.From.Name,msg.Text);
+            if (msg.Text=="!users")
+            {
+                await context.PostAsync(BuildReply(
+                    sb =>
+                    {
+                        ConversationState.Users.ForEach(x => sb.AppendLine(x));
+                    }));
+            }
+            else if (msg.Text=="!stats")
+            {
+                await context.PostAsync(BuildReply(
+                    sb =>
+                    {
+                        foreach(var x in ConversationState.UserMsgs)
+                        { sb.AppendLine($"{x.Key}: {x.Value}"); }
+                    }));
+            }
             context.Wait(ProcessMessage);
+        }
+
+        protected string BuildReply(Action<StringBuilder> body)
+        {
+            var sb = new StringBuilder();
+            body(sb);
+            return sb.ToString();
         }
     }
 }
