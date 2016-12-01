@@ -22,7 +22,7 @@ namespace MediatorBot
         {
             var msg = await result;
             ConversationState.RegisterMessage(msg.From.Name,msg.Text);
-            if (msg.Text=="!users")
+            if (msg.Text == "!users")
             {
                 await context.PostAsync(BuildReply(
                     sb =>
@@ -30,14 +30,18 @@ namespace MediatorBot
                         ConversationState.Users.ForEach(x => sb.AppendLine(x.name));
                     }));
             }
-            else if (msg.Text=="!stats")
+            else if (msg.Text == "!stats")
             {
                 await context.PostAsync(BuildReply(
                     sb =>
                     {
-                        foreach(var x in ConversationState.Users)
+                        foreach (var x in ConversationState.Users)
                         { sb.AppendLine($"{x.name}: msgs={x.MessageCount}, sentiment={x.Sentiment}"); }
                     }));
+            }
+            else
+            {
+                await context.PostAsync("Listening...");
             }
             context.Wait(ProcessMessage);
         }
