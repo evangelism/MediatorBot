@@ -1,5 +1,5 @@
 #r "Newtonsoft.Json"
-#r "MediatorLib"
+#r "MediatorLib.dll"
 #load "EchoDialog.csx"
 
 using System;
