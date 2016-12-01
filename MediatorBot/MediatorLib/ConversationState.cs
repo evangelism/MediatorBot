@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms.DataVisualization.Charting;
 
 namespace MediatorLib
 {
@@ -12,6 +14,9 @@ namespace MediatorLib
     [Serializable]
     public static class ConversationState
     {
+
+        public static int GlobalTime { get; set; } = 0;
+
         public static List<User> Users { get; set; } = new List<User>();
 
         public static TextAnalysisDocumentStore fullConvHistory = new TextAnalysisDocumentStore();
@@ -24,6 +29,28 @@ namespace MediatorLib
             }
         }
 
+        public static async Task<string> GetGraph()
+        {
+            var db = new DB();
+            var ms = new MemoryStream();
+            using (var ch = new Chart())
+            {
+                ch.ChartAreas.Add(new ChartArea());
+                foreach (var u in Users)
+                {
+                    var s = new Series();
+                    s.ChartType = SeriesChartType.Line;
+                    s.Label = u.name;
+                    foreach (var pnt in u.Graph) s.Points.Add(new DataPoint(pnt.Key,pnt.Value));
+                    ch.Series.Add(s);
+                }
+                ch.SaveImage(ms, ChartImageFormat.Jpeg);
+            }
+            ms.Position = 0L;
+            var b = await db.Upload("charts", $"{Guid.NewGuid().ToString()}.jpg", ms);
+            return b.Uri.AbsoluteUri;
+        }
+
         public static async Task<TextAnalysisDocumentStore> GetPhrasesforConversation()
         {
             TextAnalysisClient client = new TextAnalysisClient("d75051af54634a9e809edf8b2bf4e262");
@@ -31,11 +58,11 @@ namespace MediatorLib
             return SentResponse;
         }
 
-        public static void RegisterMessage(string uname, string msg)
+        public static async Task RegisterMessage(string uname, string msg)
         {
             AddUser(uname);
             var u = Users.Find(x => x.name == uname);
-            u.AddSentance(msg, fullConvHistory);
+            await u.AddSentance(msg, fullConvHistory);
         }
 
         public class User
@@ -51,6 +78,8 @@ namespace MediatorLib
                 this.name = uname;
                 this.id = id_count++;
             }
+
+            public Dictionary<int, double> Graph { get; set; } = new Dictionary<int, double>();
 
             public int MessageCount = 0;
 
@@ -72,7 +101,7 @@ namespace MediatorLib
                 set;
             }
 
-            public async void AddSentance(string text, TextAnalysisDocumentStore fullhistory)
+            public async Task AddSentance(string text, TextAnalysisDocumentStore fullhistory)
             {
                 MessageCount++;
                 Sentances.Add(text);
@@ -91,6 +120,7 @@ namespace MediatorLib
                     Sentances.Clear();
                     TextAnalysisDocumentStore SentResponse = await client.AnalyzeSentiment(localStore);
                     this.Sentiment = SentResponse.documents[0].score;
+                    Graph.Add(ConversationState.GlobalTime++, Sentiment);
                     doc.id = (Convert.ToInt64 (fullhistory.documents.Count) + 1).ToString();
                     fullhistory.documents.Add(doc);
                 }

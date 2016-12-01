@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Bot.Connector;
 using System.Text;
 using MediatorLib;
+using System.IO;
 
 namespace MediatorBot
 {
@@ -23,7 +24,7 @@ namespace MediatorBot
             var msg = await result;
             if (msg.Text != "!users" && msg.Text != "!stats")
             {
-                ConversationState.RegisterMessage(msg.From.Name, msg.Text);
+                await ConversationState.RegisterMessage(msg.From.Name, msg.Text);
             }
 
             var badSentimenCheck = ConversationState.Users.Where((u => u.Sentiment < 0.4 && u.Sentiment != 0));
@@ -60,6 +61,16 @@ namespace MediatorBot
                         foreach (var x in ConversationState.Users)
                         { sb.AppendLine($"{x.name}: msgs={x.MessageCount}, sentiment={x.Sentiment}"); }
                     }));
+            }
+            else if (msg.Text == "!graph")
+            {
+                var uri = await ConversationState.GetGraph();
+                var repl = context.MakeMessage();
+                repl.Text = "Please find current graph of sentiments";
+                repl.Attachments = new Attachment[] {
+                    new Attachment(contentType: "image/jpeg", 
+                    contentUrl: uri, thumbnailUrl: uri) };
+                await context.PostAsync(repl);
             }
             else
             {
