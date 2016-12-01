@@ -21,7 +21,25 @@ namespace MediatorBot
         private async Task ProcessMessage(IDialogContext context, IAwaitable<IMessageActivity> result)
         {
             var msg = await result;
-            ConversationState.RegisterMessage(msg.From.Name,msg.Text);
+            if (msg.Text != "!users" && msg.Text != "!stats")
+            {
+                ConversationState.RegisterMessage(msg.From.Name, msg.Text);
+            }
+
+            var badSentimenCheck = ConversationState.Users.Where((u => u.Sentiment < 0.4 && u.Sentiment != 0));
+            if (badSentimenCheck.Any())
+            {
+                ConversationState.TextAnalysisDocumentStore phrasesDoc = await ConversationState.GetPhrasesforConversation();
+
+                await context.PostAsync(BuildReply(
+                sb =>
+                {
+                    foreach (string x in phrasesDoc.documents[0].keyPhrases)
+                    {
+                        sb.AppendLine($"Phrase: {x}"); }
+                     }));
+            }
+
             if (msg.Text == "!users")
             {
                 await context.PostAsync(BuildReply(

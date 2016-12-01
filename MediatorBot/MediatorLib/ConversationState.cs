@@ -14,6 +14,8 @@ namespace MediatorLib
     {
         public static List<User> Users { get; set; } = new List<User>();
 
+        public static TextAnalysisDocumentStore fullConvHistory = new TextAnalysisDocumentStore();
+
         public static void AddUser(string uname)
         {
             if (!Users.Exists(u => u.name==uname))
@@ -22,11 +24,18 @@ namespace MediatorLib
             }
         }
 
+        public static async Task<TextAnalysisDocumentStore> GetPhrasesforConversation()
+        {
+            TextAnalysisClient client = new TextAnalysisClient("d75051af54634a9e809edf8b2bf4e262");
+            TextAnalysisDocumentStore SentResponse = await client.ExtractKeyphrases(fullConvHistory);
+            return SentResponse;
+        }
+
         public static void RegisterMessage(string uname, string msg)
         {
             AddUser(uname);
             var u = Users.Find(x => x.name == uname);
-            u.AddSentance(msg);
+            u.AddSentance(msg, fullConvHistory);
         }
 
         public class User
@@ -63,7 +72,7 @@ namespace MediatorLib
                 set;
             }
 
-            public async void AddSentance(string text)
+            public async void AddSentance(string text, TextAnalysisDocumentStore fullhistory)
             {
                 MessageCount++;
                 Sentances.Add(text);
@@ -76,11 +85,14 @@ namespace MediatorLib
                     }
 
                     TextAnalysisDocumentStore localStore = new TextAnalysisDocumentStore();
-                    localStore.documents.Add(new TextAnalysisDocument() { id = (localStore.documents.Count + 1).ToString(), text = merged });
+                    TextAnalysisDocument doc = new TextAnalysisDocument() { id = (localStore.documents.Count + 1).ToString(), text = merged };
+                    localStore.documents.Add(doc);
                     TextAnalysisClient client = new TextAnalysisClient("d75051af54634a9e809edf8b2bf4e262");
                     Sentances.Clear();
                     TextAnalysisDocumentStore SentResponse = await client.AnalyzeSentiment(localStore);
                     this.Sentiment = SentResponse.documents[0].score;
+                    doc.id = (Convert.ToInt64 (fullhistory.documents.Count) + 1).ToString();
+                    fullhistory.documents.Add(doc);
                 }
             }
 
