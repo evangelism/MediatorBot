@@ -81,7 +81,7 @@ namespace MediatorBot
                         ConversationState.Users.ForEach(x => sb.AppendLine(x.name));
                     }));
             }
-            //Stats and graph
+            //Stats and graph, put into separate LUIS intent, but to be sure, we leave it also here
             else if (msg.Text == "!stats")
             {
                 await context.PostAsync(BuildReply(
@@ -93,18 +93,202 @@ namespace MediatorBot
             }
             else if (msg.Text == "!graph")
             {
-                var uri = await ConversationState.GetGraph();
-                var repl = context.MakeMessage();
-                repl.Text = "Please find current graph of sentiments";
-                repl.Attachments = new Attachment[] {
-                    new Attachment(contentType: "image/jpeg", 
-                    contentUrl: uri, thumbnailUrl: uri) };
+                IMessageActivity repl = await CreateGraphReply(context);
                 await context.PostAsync(repl);
             }
             else
             {
                 //await context.PostAsync("");
             }
+            context.Wait(MessageReceived);
+        }
+
+        private static async Task<IMessageActivity> CreateGraphReply(IDialogContext context, string name = "")
+        {
+
+            var uri = await ConversationState.GetGraph(name);
+            var repl = context.MakeMessage();
+            repl.Text = "Please find current graph of sentiments";
+            repl.Attachments = new Attachment[] {
+                    new Attachment(contentType: "image/jpeg",
+                    contentUrl: uri, thumbnailUrl: uri) };
+            return repl;
+        }
+
+        [LuisIntent("Graph")]
+        public async Task ShowGraph(IDialogContext context, LuisResult result)
+        {
+            
+            bool wrongName = false;
+            string name = "";
+            if(result.Entities != null && result.Entities.Count > 0)
+                name = GetNameFromPersonEntity(new List<EntityRecommendation>(result.Entities));
+            if (name != "" && !ConversationState.Users.Any(user => user.name.ToLower() == name))
+            {
+                //Wrong name
+                name = "";
+                wrongName = true;
+            }
+
+            IMessageActivity repl = await CreateGraphReply(context, name);
+            if (wrongName)
+                repl.Text = "User with provided user name does not exist. I am sending graph for all the users.";
+            await context.PostAsync(repl);
+            context.Wait(MessageReceived);
+        }
+
+        private static string GetNameFromPersonEntity(List<EntityRecommendation> entities)
+        {
+            var name = "";
+            if (entities != null && entities.Any((entity) => entity.Type == "Person"))
+            {
+                name = entities.Where(e => e.Type == "Person").FirstOrDefault().Entity;
+            }
+            return name;
+        }
+
+        [LuisIntent("Stats")]
+        public async Task ShowStats(IDialogContext context, LuisResult result)
+        {
+            string name = "";
+            if(result.Entities.Count != 0)
+                name = GetNameFromPersonEntity(new List<EntityRecommendation>(result.Entities));
+
+            ConversationState.User u = null;
+            if (name != "" && ConversationState.Users.Any(user => user.name.ToLower() == name))
+                u = ConversationState.Users.Where(user => user.name.ToLower() == name.ToLower()).FirstOrDefault();
+
+
+            if (name == "" || u == null)
+            {
+                if (name != "")
+                    await context.PostAsync(BuildReply(
+                        sb =>
+                        {
+                            sb.AppendLine("User does not exist. I am showing stats for all users");
+                            
+                        }));
+
+                await context.PostAsync(BuildReply(
+                        sb =>
+                        {
+                            
+                            foreach (var x in ConversationState.Users)
+                            {
+                                sb.AppendLine($"{x.name}: msgs={x.MessageCount}, sentiment={x.Sentiment}");
+                            }
+                        }));
+            }
+            else
+            {
+                await context.PostAsync(BuildReply(
+                       sb =>
+                       {
+                           { sb.AppendLine($"{u.name}: msgs={u.MessageCount}, sentiment={u.Sentiment}"); }
+                       }));
+            }
+            context.Wait(MessageReceived);
+        }
+
+        [LuisIntent("MostPositive")]
+        public async Task ShowMostPositive(IDialogContext context, LuisResult result)
+        {
+            double sentiment = 0;
+            ConversationState.User mostPositiveU = ConversationState.Users.First();
+            foreach(var u in ConversationState.Users)
+            {
+                if(u.Sentiment > sentiment)
+                {
+                    mostPositiveU = u;
+                    sentiment = u.Sentiment;
+                }
+            }
+
+            await context.PostAsync(BuildReply(
+                       sb =>
+                       {
+                           {
+                               sb.AppendLine("The most positive user is:");
+                               sb.AppendLine($"{mostPositiveU.name}: msgs={mostPositiveU.MessageCount}, sentiment={mostPositiveU.Sentiment}");
+                           }
+                       }));
+            context.Wait(MessageReceived);
+        }
+
+        [LuisIntent("LeastPositive")]
+        public async Task ShowLeastPositive(IDialogContext context, LuisResult result)
+        {
+            double sentiment = 1;
+            ConversationState.User leastPositive = ConversationState.Users.First();
+            foreach (var u in ConversationState.Users)
+            {
+                if (u.Sentiment < sentiment)
+                {
+                    leastPositive = u;
+                    sentiment = u.Sentiment;
+                }
+            }
+
+            await context.PostAsync(BuildReply(
+                       sb =>
+                       {
+                           {
+                               sb.AppendLine("The least positive user is:");
+                               sb.AppendLine($"{leastPositive.name}: msgs={leastPositive.MessageCount}, sentiment={leastPositive.Sentiment}");
+                           }
+                       }));
+            context.Wait(MessageReceived);
+        }
+
+        [LuisIntent("MostActive")]
+        public async Task ShowMostActive(IDialogContext context, LuisResult result)
+        {
+            int msgCount = 0;
+            ConversationState.User mostActiveU = null;
+            
+            foreach (var u in ConversationState.Users)
+            {
+                if (u.MessageCount >= msgCount)
+                {
+                    mostActiveU = u; ;
+                    msgCount = u.MessageCount;
+                }
+            }
+
+            await context.PostAsync(BuildReply(
+                       sb =>
+                       {
+                           {
+                               sb.AppendLine("The most active user is:");
+                               sb.AppendLine($"{mostActiveU.name}: msgs={mostActiveU.MessageCount}, sentiment={mostActiveU.Sentiment}");
+                           }
+                       }));
+            context.Wait(MessageReceived);
+        }
+
+        [LuisIntent("LeastActive")]
+        public async Task ShowLeastActive(IDialogContext context, LuisResult result)
+        {
+            int msgCount = int.MaxValue;
+            ConversationState.User leastActiveU = null;
+
+            foreach (var u in ConversationState.Users)
+            {
+                if (u.MessageCount <= msgCount)
+                {
+                    leastActiveU = u; ;
+                    msgCount = u.MessageCount;
+                }
+            }
+
+            await context.PostAsync(BuildReply(
+                       sb =>
+                       {
+                           {
+                               sb.AppendLine("The least active user is:");
+                               sb.AppendLine($"{leastActiveU.name}: msgs={leastActiveU.MessageCount}, sentiment={leastActiveU.Sentiment}");
+                           }
+                       }));
             context.Wait(MessageReceived);
         }
 
