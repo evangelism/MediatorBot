@@ -29,7 +29,7 @@ namespace MediatorLib
             }
         }
 
-        public static async Task<string> GetGraph()
+        public static async Task<string> GetGraph(string uname="")
         {
             var db = new DB();
             var ms = new MemoryStream();
@@ -38,11 +38,14 @@ namespace MediatorLib
                 ch.ChartAreas.Add(new ChartArea());
                 foreach (var u in Users)
                 {
-                    var s = new Series();
-                    s.ChartType = SeriesChartType.Line;
-                    s.Label = u.name;
-                    foreach (var pnt in u.Graph) s.Points.Add(new DataPoint(pnt.Key,pnt.Value));
-                    ch.Series.Add(s);
+                    if (uname == "" || u.name == uname)
+                    {
+                        var s = new Series();
+                        s.ChartType = SeriesChartType.Line;
+                        s.Label = u.name;
+                        foreach (var pnt in u.Graph) s.Points.Add(new DataPoint(pnt.Key, pnt.Value));
+                        ch.Series.Add(s);
+                    }
                 }
                 ch.SaveImage(ms, ChartImageFormat.Jpeg);
             }
