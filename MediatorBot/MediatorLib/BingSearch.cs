@@ -48,7 +48,7 @@ namespace MediatorLib
 
                 var rand = new Random();
 
-                return data.value[rand.Next(data.value.Count - 1)];
+                return data.value[1];
 
             }
             catch (Exception)
