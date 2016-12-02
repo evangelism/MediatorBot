@@ -41,7 +41,7 @@ namespace MediatorBot
             if (badSentimenCheck.Any())
             {
                 ConversationState.TextAnalysisDocumentStore phrasesDoc = await ConversationState.GetPhrasesforConversation();
-
+                Random r = new Random();
                 double score = 0;
                 var k = 0;
                 var i = 0;
@@ -55,7 +55,7 @@ namespace MediatorBot
                     i++;
                 }
 
-                var reply = await BuildBingReply(phrasesDoc.documents[k].keyPhrases[0]);
+                var reply = await BuildBingReply(phrasesDoc.documents[k].keyPhrases[r.Next(phrasesDoc.documents[k].keyPhrases.Count())]);
                 await context.PostAsync(reply);
                 
 
