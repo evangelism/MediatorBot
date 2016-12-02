@@ -26,7 +26,7 @@ namespace MediatorLib
                 var json = await result.Content.ReadAsStringAsync();
                 dynamic data = JObject.Parse(json);
 
-                return data.webPages.value[r.Next(5)];
+                return data.webPages.value[0];
 
             }
             catch (Exception)
