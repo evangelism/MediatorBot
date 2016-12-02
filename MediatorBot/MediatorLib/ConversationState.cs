@@ -38,7 +38,7 @@ namespace MediatorLib
                 ch.ChartAreas.Add(new ChartArea());
                 foreach (var u in Users)
                 {
-                    if (uname == "" || u.name.ToLower() == uname.ToLower())
+                    if (uname == "" || u.name == uname)
                     {
                         var s = new Series();
                         s.ChartType = SeriesChartType.Line;
