@@ -11,7 +11,7 @@ namespace MediatorLib
     public class BingSearch
     {
         static HttpClient searchClient = new HttpClient();
-        static string BingSearchKey = "8abe8220d5344e58bb5ad28fdd9ac29a";
+        static string BingSearchKey = "f45a59f3e7bd45d98a26fca6d15caa6d";
 
         public static async Task<JObject> CallBingSearch(string q)
         {
