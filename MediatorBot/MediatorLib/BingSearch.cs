@@ -19,14 +19,13 @@ namespace MediatorLib
             searchClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", BingSearchKey);
             try
             {
-                Random r = new Random();
                 var url = string.Format("https://api.cognitive.microsoft.com/bing/v5.0/search?q={0}&count={1}&mkt={2}", q, "1000", "en-GB");
                 var result = await searchClient.GetAsync(url);
                 result.EnsureSuccessStatusCode();
                 var json = await result.Content.ReadAsStringAsync();
                 dynamic data = JObject.Parse(json);
 
-                return data.webPages.value[0];
+                return data.webPages.value[1];
 
             }
             catch (Exception)
